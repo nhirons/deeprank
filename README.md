@@ -45,14 +45,14 @@ from deeprank import OrdinalOutput
 ```
 The activation directly before the OrdinalOutput layer should be 1D. This is our "ordered logit".
 
-For simplicity of notation, if we have `K` ordered, 0-indexed classes, we define `K+1` thresholds `t<sub>k</sub>` such that:
+For simplicity of notation, if we have `K` ordered, 0-indexed classes, we define `K+1` thresholds `t(k)` such that:
 ```
-P(y<k|X<sub>i</sub>) = sigmoid(t<sub>k</sub> - logit)
+P(y<k|Xi) = sigmoid(t(k) - logit)
 ```
 Naturally:
 ```
-t<sub>0</sub> = -inf
-t<sub>K</sub> = inf
+t(0) = -inf
+t(K) = inf
 ```
 
 The `OrdinalOutput` layer has been designed for use with `categorical_crossentropy` loss. The layer will learn the appropriate category thresholds for the ordered logit simultaneously with the weights from any prior layers. During initialization, the thresholds are randomly generated based on a chosen initializer, but then *ordered*. This is crucial for the loss function to behave properly. 
