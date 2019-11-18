@@ -22,7 +22,8 @@ First, we'll generate some basic regression data.
 x, y = make_regression(
     n_samples=10000,
     n_features=20,
-    n_informative=15)
+    n_informative=15
+)
 ```
 
 We need to "squish" this data into an ordinal form. Let's do 4 ordered categories (0, 1, 2, 3).
@@ -55,7 +56,11 @@ t(0) = -inf
 t(K) = inf
 ```
 
-The `OrdinalOutput` layer has been designed for use with `categorical_crossentropy` loss. The layer will learn the appropriate category thresholds for the ordered logit simultaneously with the weights from any prior layers. During initialization, the thresholds are randomly generated based on a chosen initializer, but then *ordered*. This is crucial for the loss function to behave properly. 
+In this example, the `OrdinalOutput` layer is being used with `categorical_crossentropy` loss for simplicity. However, it is better practice to implement an ordinal loss function (see [Rennie & Srebro](https://ttic.uchicago.edu/~nati/Publications/RennieSrebroIJCAI05.pdf "Loss Function for Preference Levels")).
+
+The layer will learn the appropriate category thresholds for the ordered logit simultaneously with the weights from any prior layers. Thresholds themselves may be regularized by the loss function if desired.
+
+During initialization, the thresholds are randomly generated based on a chosen initializer, but then *ordered*. This is crucial for the loss function to behave properly. 
 
 Let's spin up a super simple model for our example:
 
@@ -74,7 +79,8 @@ history = model.fit(
     epochs=100,
     batch_size=32,
     validation_data=(x_val, y_val),
-    callbacks=[model_checkpoint, early_stopping])
+    callbacks=[model_checkpoint, early_stopping]
+)
 ```
 After training, we can observe the thresholds learnt by the `OrdinalOutput` layer.
 ```
