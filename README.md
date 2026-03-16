@@ -4,11 +4,19 @@ An implementation of deep ordinal regression in Keras for ranking problems.
 ## Getting started
 
 ### Prerequisites
-The latest versions of:
 ```
-tensorflow
-keras
+tensorflow>=2.0
 numpy
+```
+
+### Installation
+```bash
+pip install .
+```
+
+For development:
+```bash
+pip install -e .
 ```
 
 ## Example
@@ -44,7 +52,7 @@ Looks good.
 ```
 from deeprank import OrdinalOutput
 ```
-The activation directly before the OrdinalOutput layer should be 1D. This is our "ordered logit".
+The `OrdinalOutput` layer accepts any input width — it learns its own projection to a single ordered logit internally.
 
 For simplicity of notation, if we have `K` ordered, 0-indexed classes, we define `K+1` thresholds `t(k)` such that:
 ```
@@ -68,7 +76,6 @@ Let's spin up a super simple model for our example:
 model = Sequential()
 model.add(Dense(units=32, activation='relu', input_dim=20))
 model.add(Dense(units=32, activation='relu'))
-model.add(Dense(units=1, activation='linear'))
 model.add(OrdinalOutput(output_dim=4))
 ```
 

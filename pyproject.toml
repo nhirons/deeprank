@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deeprank"
+version = "0.1.0"
+description = "Deep ordinal regression in Keras for ranking problems"
+requires-python = ">=3.8"
+dependencies = [
+    "tensorflow>=2.0",
+    "numpy",
+]
+
+[project.urls]
+Repository = "https://github.com/nicholashirons/deeprank"
