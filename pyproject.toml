@@ -1,16 +1,23 @@
-[build-system]
-requires = ["setuptools>=64"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "deeprank"
 version = "0.1.0"
-description = "Deep ordinal regression in Keras for ranking problems"
-requires-python = ">=3.8"
-dependencies = [
-    "tensorflow>=2.0",
-    "numpy",
+description = "Deep ordinal regression for ranking problems (TensorFlow/Keras and PyTorch)"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+tf = ["tensorflow>=2.0"]
+torch = ["torch>=2.0"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
 [project.urls]
-Repository = "https://github.com/nicholashirons/deeprank"
+Repository = "https://github.com/nhirons/deeprank"
