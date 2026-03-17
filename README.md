@@ -1,13 +1,13 @@
-# DeepRank
+# DeepOrdinal
 
-Deep ordinal regression for ranking problems, with TensorFlow/Keras and PyTorch backends.
+Ordinal output layers and loss functions ([Rennie & Srebro, 2005](https://ttic.uchicago.edu/~nati/Publications/RennieSrebroIJCAI05.pdf)) for PyTorch and TF/Keras.
 
-DeepRank provides an `OrdinalOutput` layer that converts a learned logit into ordinal class probabilities via sorted thresholds, plus loss functions from [Rennie & Srebro (IJCAI 2005)](https://ttic.uchicago.edu/~nati/Publications/RennieSrebroIJCAI05.pdf) designed specifically for ordinal regression.
+DeepOrdinal provides an `OrdinalOutput` layer that converts a learned logit into ordinal class probabilities via sorted thresholds, plus loss functions designed specifically for ordinal regression.
 
 ## Installation
 
 ```bash
-pip install .
+pip install deepordinal
 ```
 
 With a specific backend:
@@ -25,11 +25,11 @@ pip install -e ".[tf,torch]"
 
 ## Backends
 
-DeepRank supports two backends with identical APIs:
+DeepOrdinal supports two backends with identical APIs:
 
 | | PyTorch | TensorFlow/Keras |
 |---|---|---|
-| Module | `deeprank.torch` | `deeprank.tf` |
+| Module | `deepordinal.torch` | `deepordinal.tf` |
 | Layer | `OrdinalOutput(input_dim=D, output_dim=K)` | `OrdinalOutput(output_dim=K)` |
 | Loss functions | `ordinal_loss`, `ordistic_loss` | `ordinal_loss`, `ordistic_loss` |
 
@@ -44,13 +44,13 @@ P(y = k | x) = sigmoid(t(k+1) - logit) - sigmoid(t(k) - logit)
 where `t(0) = -inf` and `t(K) = inf` are fixed, and interior thresholds are initialized sorted.
 
 ```python
-from deeprank.torch import OrdinalOutput  # or deeprank.tf
+from deepordinal.torch import OrdinalOutput  # or deepordinal.tf
 layer = OrdinalOutput(input_dim=16, output_dim=4)  # TF omits input_dim
 ```
 
 ## Loss Functions
 
-DeepRank implements the threshold-based ordinal loss functions from Rennie & Srebro, "Loss Functions for Preference Levels" (IJCAI 2005). These operate on raw logits and thresholds rather than probability output.
+DeepOrdinal implements the threshold-based ordinal loss functions from Rennie & Srebro, "Loss Functions for Preference Levels" (IJCAI 2005). These operate on raw logits and thresholds rather than probability output.
 
 ### `ordinal_loss`
 
@@ -101,7 +101,7 @@ ordistic_loss(logits, targets, means, log_priors=None)
 
 ```python
 import torch
-from deeprank.torch import OrdinalOutput, ordinal_loss
+from deepordinal.torch import OrdinalOutput, ordinal_loss
 
 layer = OrdinalOutput(input_dim=16, output_dim=4)
 h = torch.randn(8, 16)
@@ -116,7 +116,7 @@ loss.backward()
 
 ```python
 import tensorflow as tf
-from deeprank.tf import OrdinalOutput, ordinal_loss
+from deepordinal.tf import OrdinalOutput, ordinal_loss
 
 layer = OrdinalOutput(output_dim=4)
 h = tf.random.normal((8, 16))
@@ -142,11 +142,11 @@ pytest -v
 
 - Added `ordinal_loss` — Rennie & Srebro threshold-based ordinal loss with two constructions (all-threshold, immediate-threshold) and four penalty functions (hinge, smooth hinge, modified least squares, logistic)
 - Added `ordistic_loss` — ordistic negative log-likelihood loss (Rennie & Srebro, Section 4)
-- Both loss functions available in `deeprank.torch` and `deeprank.tf`
+- Both loss functions available in `deepordinal.torch` and `deepordinal.tf`
 
 ### 0.1.0
 
-- Added PyTorch backend (`deeprank.torch`) with `OrdinalOutput` module
+- Added PyTorch backend (`deepordinal.torch`) with `OrdinalOutput` module
 - Modernized TensorFlow backend to `tf.keras` with self-contained `OrdinalOutput` layer and `SortedInitializer`
 - Dual-backend support (TensorFlow/Keras and PyTorch) with matching APIs
 - `pyproject.toml` build configuration with optional `[tf]` and `[torch]` extras
@@ -156,7 +156,8 @@ pytest -v
 - `OrdinalOutput` Keras layer for deep ordinal regression
 - Example notebook with synthetic ordinal data
 
-## Notebooks
+## Examples
 
-`notebooks/example.ipynb` contains a full working example with synthetic ordinal data using the TensorFlow backend.
+- `examples/example_tf.ipynb` — TensorFlow/Keras with `ordinal_loss` and `GradientTape` training loop
+- `examples/example_torch.ipynb` — PyTorch with `ordinal_loss` and standard training loop
 

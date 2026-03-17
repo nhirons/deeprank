@@ -2,7 +2,7 @@ import pytest
 
 tf = pytest.importorskip("tensorflow")
 
-from deeprank.tf import OrdinalOutput, SortedInitializer, ordinal_loss, ordistic_loss
+from deepordinal.tf import OrdinalOutput, SortedInitializer, ordinal_loss, ordistic_loss
 
 
 def test_output_shape():
@@ -74,37 +74,37 @@ import numpy as np
 
 class TestPenaltyFunctions:
     def test_hinge_values(self):
-        from deeprank.tf import _penalty
+        from deepordinal.tf import _penalty
         z = tf.constant([-1.0, 0.0, 0.5, 1.0, 2.0])
         expected = [2.0, 1.0, 0.5, 0.0, 0.0]
         np.testing.assert_allclose(_penalty(z, "hinge").numpy(), expected)
 
     def test_smooth_hinge_values(self):
-        from deeprank.tf import _penalty
+        from deepordinal.tf import _penalty
         z = tf.constant([-1.0, 0.0, 0.5, 1.0, 2.0])
         expected = [1.5, 0.5, 0.125, 0.0, 0.0]
         np.testing.assert_allclose(_penalty(z, "smooth_hinge").numpy(), expected)
 
     def test_modified_least_squares_values(self):
-        from deeprank.tf import _penalty
+        from deepordinal.tf import _penalty
         z = tf.constant([-1.0, 0.0, 0.5, 1.0, 2.0])
         expected = [4.0, 1.0, 0.25, 0.0, 0.0]
         np.testing.assert_allclose(_penalty(z, "modified_least_squares").numpy(), expected)
 
     def test_logistic_values(self):
-        from deeprank.tf import _penalty
+        from deepordinal.tf import _penalty
         z = tf.constant([0.0])
         result = _penalty(z, "logistic").numpy()
         np.testing.assert_allclose(result, [0.6931471805599453], atol=1e-5)
 
     def test_all_penalties_non_negative(self):
-        from deeprank.tf import _penalty
+        from deepordinal.tf import _penalty
         z = tf.linspace(-3.0, 3.0, 100)
         for name in ["hinge", "smooth_hinge", "modified_least_squares", "logistic"]:
             assert tf.reduce_all(_penalty(z, name) >= -1e-7).numpy(), f"{name} produced negative values"
 
     def test_unknown_penalty_raises(self):
-        from deeprank.tf import _penalty
+        from deepordinal.tf import _penalty
         with pytest.raises(ValueError, match="Unknown penalty"):
             _penalty(tf.constant([0.0]), "bad")
 

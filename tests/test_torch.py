@@ -2,7 +2,7 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from deeprank.torch import OrdinalOutput, ordinal_loss, ordistic_loss
+from deepordinal.torch import OrdinalOutput, ordinal_loss, ordistic_loss
 
 
 def test_output_shape():
@@ -69,35 +69,35 @@ class TestPenaltyFunctions:
     def test_hinge_values(self):
         z = torch.tensor([-1.0, 0.0, 0.5, 1.0, 2.0])
         expected = torch.tensor([2.0, 1.0, 0.5, 0.0, 0.0])
-        from deeprank.torch import _penalty
+        from deepordinal.torch import _penalty
         torch.testing.assert_close(_penalty(z, "hinge"), expected)
 
     def test_smooth_hinge_values(self):
         z = torch.tensor([-1.0, 0.0, 0.5, 1.0, 2.0])
         expected = torch.tensor([1.5, 0.5, 0.125, 0.0, 0.0])
-        from deeprank.torch import _penalty
+        from deepordinal.torch import _penalty
         torch.testing.assert_close(_penalty(z, "smooth_hinge"), expected)
 
     def test_modified_least_squares_values(self):
         z = torch.tensor([-1.0, 0.0, 0.5, 1.0, 2.0])
         expected = torch.tensor([4.0, 1.0, 0.25, 0.0, 0.0])
-        from deeprank.torch import _penalty
+        from deepordinal.torch import _penalty
         torch.testing.assert_close(_penalty(z, "modified_least_squares"), expected)
 
     def test_logistic_values(self):
         z = torch.tensor([0.0])
-        from deeprank.torch import _penalty
+        from deepordinal.torch import _penalty
         result = _penalty(z, "logistic")
         torch.testing.assert_close(result, torch.tensor([0.6931471805599453]), atol=1e-5, rtol=0)
 
     def test_all_penalties_non_negative(self):
-        from deeprank.torch import _penalty
+        from deepordinal.torch import _penalty
         z = torch.linspace(-3, 3, 100)
         for name in ["hinge", "smooth_hinge", "modified_least_squares", "logistic"]:
             assert (_penalty(z, name) >= -1e-7).all(), f"{name} produced negative values"
 
     def test_unknown_penalty_raises(self):
-        from deeprank.torch import _penalty
+        from deepordinal.torch import _penalty
         with pytest.raises(ValueError, match="Unknown penalty"):
             _penalty(torch.tensor([0.0]), "bad")
 

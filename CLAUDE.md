@@ -4,15 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DeepRank is a Keras library implementing deep ordinal regression via an `OrdinalOutput` custom layer. It converts a 1D "ordered logit" activation into ordinal class probabilities using learned, sorted thresholds.
+DeepOrdinal is a Python library implementing deep ordinal regression for PyTorch and TensorFlow/Keras. It provides an `OrdinalOutput` layer that converts a learned logit into ordinal class probabilities via sorted thresholds, plus loss functions from Rennie & Srebro (2005).
 
 ## Architecture
 
-The library is packaged as `deeprank/` (flat layout), with the main code in `deeprank/__init__.py`. It exports one class:
+The library is packaged as `deepordinal/` (flat layout) with two backend modules:
 
-- **`OrdinalOutput(Layer)`** — A Keras custom layer that takes a 1D input (the ordered logit) and produces K class probabilities using K+1 thresholds (first/last fixed at -inf/+inf, interior ones are learned). Thresholds are initialized sorted via `sorted_initializer` to ensure proper loss behavior.
+- **`deepordinal/torch.py`** — PyTorch backend: `OrdinalOutput(nn.Module)`, `ordinal_loss`, `ordistic_loss`
+- **`deepordinal/tf.py`** — TensorFlow/Keras backend: `OrdinalOutput(Layer)`, `ordinal_loss`, `ordistic_loss`
 
-Key math: `P(y<k|Xi) = sigmoid(t(k) - logit)`, with class probabilities derived from adjacent threshold differences.
+Both backends expose identical APIs. The `OrdinalOutput` layer takes an input, projects to a single logit, and produces K class probabilities using K-1 learned, sorted thresholds.
+
+Key math: `P(y=k|x) = sigmoid(t(k+1) - logit) - sigmoid(t(k) - logit)`, with `t(0) = -inf` and `t(K) = inf` fixed.
 
 ## Build System
 
@@ -20,18 +23,17 @@ Uses `pyproject.toml` with setuptools. Install with `pip install -e .` for devel
 
 ## Dependencies
 
-- tensorflow>=2.0, numpy (declared in `pyproject.toml`)
-- All Keras imports use `tensorflow.keras` (not standalone `keras`)
+- **Base:** `numpy`
+- **Optional extras:** `pip install ".[tf]"` for TensorFlow, `pip install ".[torch]"` for PyTorch
 
 ## Usage
 
 ```python
-from deeprank import OrdinalOutput
-model.add(OrdinalOutput(output_dim=K))  # K = number of ordered classes
+from deepordinal.torch import OrdinalOutput, ordinal_loss  # PyTorch
+from deepordinal.tf import OrdinalOutput, ordinal_loss      # TensorFlow/Keras
 ```
 
-The layer accepts any input width — it learns its own projection to a single logit internally. Works with `categorical_crossentropy` but an ordinal-specific loss (e.g., Rennie & Srebro) is preferred.
+## Examples
 
-## Notebooks
-
-`notebooks/example.ipynb` contains a full working example with synthetic ordinal data.
+- `examples/example_torch.ipynb` — PyTorch with `ordinal_loss` and standard training loop
+- `examples/example_tf.ipynb` — TensorFlow/Keras with `ordinal_loss` and `GradientTape` training loop
