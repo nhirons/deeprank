@@ -27,15 +27,15 @@ pip install -e ".[tf,torch]"
 
 DeepRank supports two backends with identical APIs:
 
-| | TensorFlow/Keras | PyTorch |
+| | PyTorch | TensorFlow/Keras |
 |---|---|---|
-| Module | `deeprank.tf` | `deeprank.torch` |
-| Layer | `OrdinalOutput(output_dim=K)` | `OrdinalOutput(input_dim=D, output_dim=K)` |
+| Module | `deeprank.torch` | `deeprank.tf` |
+| Layer | `OrdinalOutput(input_dim=D, output_dim=K)` | `OrdinalOutput(output_dim=K)` |
 | Loss functions | `ordinal_loss`, `ordistic_loss` | `ordinal_loss`, `ordistic_loss` |
 
 ## OrdinalOutput Layer
 
-The `OrdinalOutput` layer projects input features to a single logit and converts it into K class probabilities using K-1 learned, sorted thresholds:
+The `OrdinalOutput` layer accepts any input size, projects to a single logit, and converts it into K class probabilities using K-1 learned, sorted thresholds:
 
 ```
 P(y = k | x) = sigmoid(t(k+1) - logit) - sigmoid(t(k) - logit)
@@ -43,30 +43,9 @@ P(y = k | x) = sigmoid(t(k+1) - logit) - sigmoid(t(k) - logit)
 
 where `t(0) = -inf` and `t(K) = inf` are fixed, and interior thresholds are initialized sorted.
 
-### TensorFlow/Keras
-
 ```python
-from deeprank.tf import OrdinalOutput
-
-model = Sequential([
-    Dense(32, activation='relu', input_dim=20),
-    Dense(32, activation='relu'),
-    OrdinalOutput(output_dim=4),
-])
-```
-
-### PyTorch
-
-```python
-from deeprank.torch import OrdinalOutput
-
-model = nn.Sequential(
-    nn.Linear(20, 32),
-    nn.ReLU(),
-    nn.Linear(32, 32),
-    nn.ReLU(),
-    OrdinalOutput(input_dim=32, output_dim=4),
-)
+from deeprank.torch import OrdinalOutput  # or deeprank.tf
+layer = OrdinalOutput(input_dim=16, output_dim=4)  # TF omits input_dim
 ```
 
 ## Loss Functions
@@ -121,32 +100,33 @@ ordistic_loss(logits, targets, means, log_priors=None)
 #### PyTorch
 
 ```python
+import torch
 from deeprank.torch import OrdinalOutput, ordinal_loss
 
-layer = OrdinalOutput(input_dim=32, output_dim=4)
-probs = layer(x)
+layer = OrdinalOutput(input_dim=16, output_dim=4)
+h = torch.randn(8, 16)
+targets = torch.randint(0, 4, (8,))
 
-# Access logits and thresholds for the loss
-logit = layer.linear(x)
-thresholds = layer.interior_thresholds
-
-loss = ordinal_loss(logit, targets, thresholds, construction='all', penalty='logistic')
+probs = layer(h)
+loss = ordinal_loss(layer.linear(h), targets, layer.interior_thresholds)
 loss.backward()
 ```
 
 #### TensorFlow
 
 ```python
+import tensorflow as tf
 from deeprank.tf import OrdinalOutput, ordinal_loss
 
 layer = OrdinalOutput(output_dim=4)
-probs = layer(x)
+h = tf.random.normal((8, 16))
+targets = tf.random.uniform((8,), 0, 4, dtype=tf.int32)
 
-# Access logits and thresholds for the loss
-logit = tf.matmul(x, layer.kernel) + layer.bias
-thresholds = tf.squeeze(layer.interior_thresholds)
-
-loss = ordinal_loss(logit, targets, thresholds, construction='all', penalty='logistic')
+with tf.GradientTape() as tape:
+    probs = layer(h)
+    logit = tf.matmul(h, layer.kernel) + layer.bias
+    loss = ordinal_loss(logit, targets, tf.squeeze(layer.interior_thresholds))
+grads = tape.gradient(loss, layer.trainable_variables)
 ```
 
 ## Running Tests
