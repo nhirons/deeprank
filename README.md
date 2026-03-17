@@ -1,98 +1,182 @@
 # DeepRank
-An implementation of deep ordinal regression in Keras for ranking problems.
 
-## Getting started
+Deep ordinal regression for ranking problems, with TensorFlow/Keras and PyTorch backends.
 
-### Prerequisites
-```
-tensorflow>=2.0
-numpy
-```
+DeepRank provides an `OrdinalOutput` layer that converts a learned logit into ordinal class probabilities via sorted thresholds, plus loss functions from [Rennie & Srebro (IJCAI 2005)](https://ttic.uchicago.edu/~nati/Publications/RennieSrebroIJCAI05.pdf) designed specifically for ordinal regression.
 
-### Installation
+## Installation
+
 ```bash
 pip install .
 ```
 
-For development:
+With a specific backend:
+
 ```bash
-pip install -e .
+pip install ".[tf]"     # TensorFlow/Keras
+pip install ".[torch]"  # PyTorch
 ```
 
-## Example
+For development:
 
-### Generating data
-Let's generate some quick and dirty ordinal data using sklearn.
+```bash
+pip install -e ".[tf,torch]"
+```
 
-First, we'll generate some basic regression data.
+## Backends
+
+DeepRank supports two backends with identical APIs:
+
+| | TensorFlow/Keras | PyTorch |
+|---|---|---|
+| Module | `deeprank.tf` | `deeprank.torch` |
+| Layer | `OrdinalOutput(output_dim=K)` | `OrdinalOutput(input_dim=D, output_dim=K)` |
+| Loss functions | `ordinal_loss`, `ordistic_loss` | `ordinal_loss`, `ordistic_loss` |
+
+## OrdinalOutput Layer
+
+The `OrdinalOutput` layer projects input features to a single logit and converts it into K class probabilities using K-1 learned, sorted thresholds:
 
 ```
-x, y = make_regression(
-    n_samples=10000,
-    n_features=20,
-    n_informative=15
+P(y = k | x) = sigmoid(t(k+1) - logit) - sigmoid(t(k) - logit)
+```
+
+where `t(0) = -inf` and `t(K) = inf` are fixed, and interior thresholds are initialized sorted.
+
+### TensorFlow/Keras
+
+```python
+from deeprank.tf import OrdinalOutput
+
+model = Sequential([
+    Dense(32, activation='relu', input_dim=20),
+    Dense(32, activation='relu'),
+    OrdinalOutput(output_dim=4),
+])
+```
+
+### PyTorch
+
+```python
+from deeprank.torch import OrdinalOutput
+
+model = nn.Sequential(
+    nn.Linear(20, 32),
+    nn.ReLU(),
+    nn.Linear(32, 32),
+    nn.ReLU(),
+    OrdinalOutput(input_dim=32, output_dim=4),
 )
 ```
 
-We need to "squish" this data into an ordinal form. Let's do 4 ordered categories (0, 1, 2, 3).
-```
-qt = QuantileTransformer()
-y = qt.fit_transform(y.reshape(-1, 1))[:,0]
-y = np.floor(y * 4) # Encode to 4 uniformly distributed ranks
-y = to_categorical(y)
-x_train, x_val, y_train, y_val = train_test_split(x, y)
-```
-```
-y.mean(axis=0)
-array([ 0.2501,  0.2501,  0.2501,  0.2497])
-```
-Looks good.
+## Loss Functions
 
-### Fitting a deep ordinal model
-```
-from deeprank import OrdinalOutput
-```
-The `OrdinalOutput` layer accepts any input width — it learns its own projection to a single ordered logit internally.
+DeepRank implements the threshold-based ordinal loss functions from Rennie & Srebro, "Loss Functions for Preference Levels" (IJCAI 2005). These operate on raw logits and thresholds rather than probability output.
 
-For simplicity of notation, if we have `K` ordered, 0-indexed classes, we define `K+1` thresholds `t(k)` such that:
-```
-P(y<k|Xi) = sigmoid(t(k) - logit)
-```
-Naturally:
-```
-t(0) = -inf
-t(K) = inf
+### `ordinal_loss`
+
+```python
+ordinal_loss(logits, targets, thresholds, construction='all', penalty='logistic')
 ```
 
-In this example, the `OrdinalOutput` layer is being used with `categorical_crossentropy` loss for simplicity. However, it is better practice to implement an ordinal loss function (see [Rennie & Srebro](https://ttic.uchicago.edu/~nati/Publications/RennieSrebroIJCAI05.pdf "Loss Function for Preference Levels")).
+- **logits**: `(batch,)` or `(batch, 1)` — raw predictor output
+- **targets**: `(batch,)` — integer labels in `[0, K)`
+- **thresholds**: `(K-1,)` — sorted interior thresholds
+- **construction**: `'all'` or `'immediate'`
+- **penalty**: `'hinge'`, `'smooth_hinge'`, `'modified_least_squares'`, or `'logistic'`
+- **Returns**: scalar mean loss over the batch
 
-The layer will learn the appropriate category thresholds for the ordered logit simultaneously with the weights from any prior layers. Thresholds themselves may be regularized by the loss function if desired.
+#### Constructions
 
-During initialization, the thresholds are randomly generated based on a chosen initializer, but then *ordered*. This is crucial for the loss function to behave properly. 
+- **All-threshold** (default, eq 13): penalizes violations of every threshold, weighted by direction. Bounds mean absolute error. Best performer in the paper's experiments.
+- **Immediate-threshold** (eq 12): only penalizes violations of the two thresholds bounding the correct class segment.
 
-Let's spin up a super simple model for our example:
+#### Penalty functions
 
-```
-model = Sequential()
-model.add(Dense(units=32, activation='relu', input_dim=20))
-model.add(Dense(units=32, activation='relu'))
-model.add(OrdinalOutput(output_dim=4))
+| Name | Formula | Reference |
+|---|---|---|
+| `'hinge'` | `max(0, 1-z)` | eq 5 |
+| `'smooth_hinge'` | 0 if z≥1, (1-z)²/2 if 0<z<1, 0.5-z if z≤0 | eq 6 |
+| `'modified_least_squares'` | 0 if z≥1, (1-z)² if z<1 | eq 7 |
+| `'logistic'` | `log(1 + exp(-z))` | eq 9 |
+
+The paper recommends **all-threshold + logistic** as the best-performing combination.
+
+### `ordistic_loss`
+
+Probabilistic generalization of logistic regression to K-class ordinal problems (Section 4).
+
+```python
+ordistic_loss(logits, targets, means, log_priors=None)
 ```
 
-Load your favorite callbacks and fit just as you would any other Keras model. That's it!
+- **logits**: `(batch,)` or `(batch, 1)` — raw predictor output
+- **targets**: `(batch,)` — integer labels in `[0, K)`
+- **means**: `(K,)` — class means (convention: μ₁=-1, μ_K=1; interior means learned)
+- **log_priors**: `(K,)` or `None` — optional log-prior terms π_i
+- **Returns**: scalar mean negative log-likelihood over the batch
+
+### Example usage
+
+#### PyTorch
+
+```python
+from deeprank.torch import OrdinalOutput, ordinal_loss
+
+layer = OrdinalOutput(input_dim=32, output_dim=4)
+probs = layer(x)
+
+# Access logits and thresholds for the loss
+logit = layer.linear(x)
+thresholds = layer.interior_thresholds
+
+loss = ordinal_loss(logit, targets, thresholds, construction='all', penalty='logistic')
+loss.backward()
 ```
-history = model.fit(
-    x_train, y_train,
-    epochs=100,
-    batch_size=32,
-    validation_data=(x_val, y_val),
-    callbacks=[model_checkpoint, early_stopping]
-)
+
+#### TensorFlow
+
+```python
+from deeprank.tf import OrdinalOutput, ordinal_loss
+
+layer = OrdinalOutput(output_dim=4)
+probs = layer(x)
+
+# Access logits and thresholds for the loss
+logit = tf.matmul(x, layer.kernel) + layer.bias
+thresholds = tf.squeeze(layer.interior_thresholds)
+
+loss = ordinal_loss(logit, targets, thresholds, construction='all', penalty='logistic')
 ```
-After training, we can observe the thresholds learnt by the `OrdinalOutput` layer.
+
+## Running Tests
+
+```bash
+pip install -e ".[tf,torch]"
+pytest -v
 ```
-model.load_weights('best_weights.h5')
-model.layers[-1].get_weights()[0]
-array([[-11.39258575,  -0.43373951,  10.62213516]], dtype=float32)
-```
-The thresholds have slowly diverged from zero. This checks out nicely.
+
+## Changelog
+
+### 0.2.0
+
+- Added `ordinal_loss` — Rennie & Srebro threshold-based ordinal loss with two constructions (all-threshold, immediate-threshold) and four penalty functions (hinge, smooth hinge, modified least squares, logistic)
+- Added `ordistic_loss` — ordistic negative log-likelihood loss (Rennie & Srebro, Section 4)
+- Both loss functions available in `deeprank.torch` and `deeprank.tf`
+
+### 0.1.0
+
+- Added PyTorch backend (`deeprank.torch`) with `OrdinalOutput` module
+- Modernized TensorFlow backend to `tf.keras` with self-contained `OrdinalOutput` layer and `SortedInitializer`
+- Dual-backend support (TensorFlow/Keras and PyTorch) with matching APIs
+- `pyproject.toml` build configuration with optional `[tf]` and `[torch]` extras
+
+### Initial
+
+- `OrdinalOutput` Keras layer for deep ordinal regression
+- Example notebook with synthetic ordinal data
+
+## Notebooks
+
+`notebooks/example.ipynb` contains a full working example with synthetic ordinal data using the TensorFlow backend.
+
