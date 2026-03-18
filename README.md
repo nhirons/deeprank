@@ -13,8 +13,8 @@ pip install deepordinal
 With a specific backend:
 
 ```bash
-pip install ".[tf]"     # TensorFlow/Keras
-pip install ".[torch]"  # PyTorch
+pip install "deepordinal[tf]"     # TensorFlow/Keras
+pip install "deepordinal[torch]"  # PyTorch
 ```
 
 For development:
@@ -129,12 +129,21 @@ with tf.GradientTape() as tape:
 grads = tape.gradient(loss, layer.trainable_variables)
 ```
 
+### Notebooks
+
+- [`examples/example_torch.ipynb`](examples/example_torch.ipynb) — PyTorch with `ordinal_loss` and standard training loop
+- [`examples/example_tf.ipynb`](examples/example_tf.ipynb) — TensorFlow/Keras with `ordinal_loss` and `GradientTape` training loop
+
 ## Running Tests
 
 ```bash
 pip install -e ".[tf,torch]"
 pytest -v
 ```
+
+## Reference
+
+Rennie, J. D. M. & Srebro, N. (2005). Loss Functions for Preference Levels: Regression with Discrete Ordered Labels. *Proceedings of the IJCAI Multidisciplinary Workshop on Advances in Preference Handling*.
 
 ## Changelog
 
@@ -155,9 +164,3 @@ pytest -v
 
 - `OrdinalOutput` Keras layer for deep ordinal regression
 - Example notebook with synthetic ordinal data
-
-## Examples
-
-- `examples/example_tf.ipynb` — TensorFlow/Keras with `ordinal_loss` and `GradientTape` training loop
-- `examples/example_torch.ipynb` — PyTorch with `ordinal_loss` and standard training loop
-
