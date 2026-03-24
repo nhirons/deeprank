@@ -129,8 +129,8 @@ ordinal_loss(logits, targets, thresholds, construction="all", penalty="logistic"
 |---|---|---|
 | `"logistic"` | `log(1 + exp(-z))` | eq 9 |
 | `"hinge"` | `max(0, 1-z)` | eq 5 |
-| `"smooth_hinge"` | 0 if z>=1, (1-z)^2/2 if 0<z<1, 0.5-z if z<=0 | eq 6 |
-| `"modified_least_squares"` | 0 if z>=1, (1-z)^2 if z<1 | eq 7 |
+| `"smooth_hinge"` | `0` if z>=1, `(1-z)^2/2` if 0<z<1, `0.5-z` if z<=0 | eq 6 |
+| `"modified_least_squares"` | `0` if z>=1, `(1-z)^2` if z<1 | eq 7 |
 
 The paper recommends **all-threshold + logistic** as the best-performing combination (the default).
 

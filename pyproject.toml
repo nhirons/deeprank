@@ -1,6 +1,6 @@
 [project]
 name = "deepordinal"
-version = "0.2.1"
+version = "0.2.1.post1"
 description = "Ordinal output layers and loss functions (Rennie & Srebro, 2005) for PyTorch and TF/Keras"
 requires-python = ">=3.10"
 dependencies = ["numpy"]
