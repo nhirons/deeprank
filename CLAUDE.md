@@ -1,39 +1,49 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
-DeepOrdinal is a Python library implementing deep ordinal regression for PyTorch and TensorFlow/Keras. It provides an `OrdinalOutput` layer that converts a learned logit into ordinal class probabilities via sorted thresholds, plus loss functions from Rennie & Srebro (2005).
+DeepOrdinal is a Python library for deep ordinal regression with PyTorch and TensorFlow/Keras. It provides an `OrdinalOutput` layer (logit -> ordinal class probabilities via sorted thresholds) and loss functions from Rennie & Srebro (2005).
 
-## Architecture
+## File Layout
 
-The library is packaged as `deepordinal/` (flat layout) with two backend modules:
-
-- **`deepordinal/torch.py`** — PyTorch backend: `OrdinalOutput(nn.Module)`, `ordinal_loss`, `ordistic_loss`
-- **`deepordinal/tf.py`** — TensorFlow/Keras backend: `OrdinalOutput(Layer)`, `ordinal_loss`, `ordistic_loss`
-
-Both backends expose identical APIs. The `OrdinalOutput` layer takes an input, projects to a single logit, and produces K class probabilities using K-1 learned, sorted thresholds.
-
-Key math: `P(y=k|x) = sigmoid(t(k+1) - logit) - sigmoid(t(k) - logit)`, with `t(0) = -inf` and `t(K) = inf` fixed.
-
-## Build System
-
-Uses `pyproject.toml` with setuptools. Install with `pip install -e .` for development.
-
-## Dependencies
-
-- **Base:** `numpy`
-- **Optional extras:** `pip install ".[tf]"` for TensorFlow, `pip install ".[torch]"` for PyTorch
-
-## Usage
-
-```python
-from deepordinal.torch import OrdinalOutput, ordinal_loss  # PyTorch
-from deepordinal.tf import OrdinalOutput, ordinal_loss      # TensorFlow/Keras
+```
+deepordinal/
+  __init__.py          # version, __all__
+  torch.py             # PyTorch: OrdinalOutput(nn.Module), ordinal_loss, ordistic_loss
+  tf.py                # TF/Keras: OrdinalOutput(Layer), SortedInitializer, ordinal_loss, ordistic_loss
+tests/
+  test_torch.py        # PyTorch tests (skipped if torch not installed)
+  test_tf.py           # TF tests (skipped if tensorflow not installed)
+examples/
+  example_torch.ipynb  # PyTorch training loop with ordinal_loss
+  example_tf.ipynb     # TF/Keras GradientTape training loop with ordinal_loss
+pyproject.toml         # build config, version, extras [torch] and [tf]
 ```
 
-## Examples
+## Key Architectural Details
 
-- `examples/example_torch.ipynb` — PyTorch with `ordinal_loss` and standard training loop
-- `examples/example_tf.ipynb` — TensorFlow/Keras with `ordinal_loss` and `GradientTape` training loop
+- Both backends expose the same public API: `OrdinalOutput`, `ordinal_loss`, `ordistic_loss`
+- `OrdinalOutput` projects input to a single logit, then produces K class probabilities from K-1 sorted thresholds
+- Math: `P(y=k|x) = sigmoid(t(k+1) - logit) - sigmoid(t(k) - logit)`, with `t(0) = -inf` and `t(K) = inf` fixed
+- Loss functions operate on raw logits + thresholds, NOT on probability output from the layer
+- PyTorch `OrdinalOutput(input_dim, output_dim)` — thresholds accessed via `layer.interior_thresholds` (shape `(K-1,)`), logit via `layer.linear(h)`
+- TF/Keras `OrdinalOutput(output_dim)` — thresholds shape is `(1, K-1)`, use `layer.interior_thresholds[0]` for loss; logit via `tf.matmul(h, layer.kernel) + layer.bias`
+- TF module additionally exports `SortedInitializer` (wraps a Keras initializer, sorts output)
+
+## Build & Test
+
+```bash
+pip install -e ".[torch,tf]"   # dev install with both backends
+pytest -v                       # run all tests
+```
+
+- Uses `pyproject.toml` with setuptools (no setup.py)
+- Python >=3.10 required
+- Base dependency: `numpy`. Backends are optional extras.
+- Tests use `pytest.importorskip` to skip backend-specific tests when that backend is not installed
+
+## Conventions
+
+- PyTorch is the primary backend — list it first in docs, examples, and code
+- Both backends must maintain API parity
+- Version is tracked in both `pyproject.toml` and `deepordinal/__init__.py` — keep them in sync
